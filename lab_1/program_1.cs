@@ -1,18 +1,14 @@
 using System;
 
-/// <summary>
-/// Простая консольная программа с двумя заданиями:
-/// 1) Записная книжка с расчётом среднего балла и разными вариантами вывода.
-/// 2) Игра на вычитание числа для двух игроков (есть бонусные настройки).
-/// </summary>
 class Program
 {
     /// <summary>
-    /// Точка входа. Показывает меню выбора задания.
+    /// Точка входа: показывает меню и запускает выбранное задание.
     /// </summary>
+    /// <param name="args">Аргументы командной строки (не используются).</param>
     static void Main(string[] args)
     {
-        // Бесконечное меню, чтобы можно было запускать задания повторно.
+        // Главный цикл: отображаем меню и обрабатываем выбор пользователя.
         while (true)
         {
             Console.Clear();
@@ -43,13 +39,14 @@ class Program
 
     /// <summary>
     /// Задание 1: вывод персональных данных и среднего балла.
+    /// Демонстрирует разные способы вывода и центрирование текста.
     /// </summary>
     static void RunNotebook()
     {
         Console.Clear();
         Console.WriteLine("=== Задание 1. Записная книжка ===");
 
-        // Данные пользователя; при необходимости измените значения для персонализации.
+        // Переменные, которые можно менять для персонализации.
         string name = "Алексей";
         int age = 23;
         double height = 1.82; // рост в метрах
@@ -96,10 +93,7 @@ class Program
         Console.ReadKey();
     }
 
-    /// <summary>
     /// Задание 2: игра на вычитание числа для двух игроков.
-    /// Есть стандартный режим, пользовательские настройки и одиночная игра против бота.
-    /// </summary>
     static void RunGame()
     {
         Console.Clear();
@@ -110,7 +104,7 @@ class Program
         Console.Write("Выберите режим: ");
 
         string mode = Console.ReadLine();
-        bool vsBot = mode == "3";
+        bool vsBot = mode == "3"; // true, если выбран бот
 
         // Настройки по умолчанию из условия.
         int minStart = 12;
@@ -144,16 +138,19 @@ class Program
             player2 = NonEmpty(Console.ReadLine(), "Игрок2");
         }
 
+        // Подготовка генератора случайных чисел и флага для повторной игры.
         var random = new Random();
         bool playAgain = true;
 
         while (playAgain)
         {
+            // Генерируем стартовое число и начинаем с первого игрока.
             int gameNumber = random.Next(minStart, maxStart + 1);
             int currentPlayerIndex = 0; // 0 - player1, 1 - player2
 
             Console.WriteLine($"\nСтартовое число: {gameNumber}");
 
+            // Игровой цикл до тех пор, пока число не станет нулём.
             while (gameNumber > 0)
             {
                 string currentPlayer = currentPlayerIndex == 0 ? player1 : player2;
@@ -196,13 +193,6 @@ class Program
         Console.ReadKey();
     }
 
-    /// <summary>
-    /// Читает целое число из диапазона [min, max] с подсказкой.
-    /// </summary>
-    /// <param name="prompt">Текст запроса.</param>
-    /// <param name="min">Минимально допустимое значение.</param>
-    /// <param name="max">Максимально допустимое значение.</param>
-    /// <returns>Корректное введённое число.</returns>
     static int ReadInt(string prompt, int min, int max)
     {
         while (true)
@@ -218,9 +208,7 @@ class Program
         }
     }
 
-    /// <summary>
     /// Возвращает строку или подставляет запасное значение, если строка пустая.
-    /// </summary>
     static string NonEmpty(string? value, string fallback)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -230,10 +218,7 @@ class Program
 
         return value.Trim();
     }
-
-    /// <summary>
-    /// Печатает массив строк, пытаясь выровнять их по центру консоли.
-    /// </summary>
+    
     static void PrintCenteredBlock(string[] lines)
     {
         int width;
