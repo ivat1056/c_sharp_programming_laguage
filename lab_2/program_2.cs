@@ -7,7 +7,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Text;
 using System.Runtime.Serialization;
-using System.Runtime.Serialization.Json;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Xml.Serialization;
 using static Helpers;
 
@@ -15,20 +17,29 @@ internal enum Formatting { None, Indented }
 
 internal static class JsonConvert
 {
+    private static readonly JsonSerializerOptions CompactOptions = new()
+    {
+        WriteIndented = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+    };
+
+    private static readonly JsonSerializerOptions IndentedOptions = new()
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+    };
+
     internal static string SerializeObject(object obj, Formatting formatting = Formatting.None)
     {
-        var serializer = new DataContractJsonSerializer(obj.GetType(), new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true });
-        using var ms = new MemoryStream();
-        serializer.WriteObject(ms, obj);
-        return Encoding.UTF8.GetString(ms.ToArray());
+        var options = formatting == Formatting.Indented ? IndentedOptions : CompactOptions;
+        return JsonSerializer.Serialize(obj, obj?.GetType() ?? typeof(object), options);
     }
 
     internal static T? DeserializeObject<T>(string json)
     {
-        var serializer = new DataContractJsonSerializer(typeof(T), new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true });
-        using var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        var obj = serializer.ReadObject(ms);
-        return obj is T t ? t : default;
+        return JsonSerializer.Deserialize<T>(json, CompactOptions);
     }
 }
 
@@ -42,16 +53,31 @@ internal static class Helpers
 
     internal static void SerializeXml<T>(T data, string path)
     {
-        var serializer = new XmlSerializer(typeof(T));
-        using var writer = new StreamWriter(path, false, Encoding.UTF8);
-        serializer.Serialize(writer, data);
+        try
+        {
+            var serializer = new XmlSerializer(typeof(T));
+            using var writer = new StreamWriter(path, false, Encoding.UTF8);
+            serializer.Serialize(writer, data);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Не удалось записать XML {path}: {ex.Message}. Файл пропущен.");
+        }
     }
 
     internal static T? DeserializeXml<T>(string path)
     {
-        var serializer = new XmlSerializer(typeof(T));
-        using var reader = new StreamReader(path, Encoding.UTF8);
-        return (T?)serializer.Deserialize(reader);
+        try
+        {
+            var serializer = new XmlSerializer(typeof(T));
+            using var reader = new StreamReader(path, Encoding.UTF8);
+            return (T?)serializer.Deserialize(reader);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Не удалось прочитать XML {path}: {ex.Message}. Файл будет перезаписан.");
+            return default;
+        }
     }
 
     internal static string ArchiveFile(string filePath)
@@ -62,7 +88,7 @@ internal static class Helpers
     }
 }
 
-internal static class Program
+public static class Program
 {
     private const int MaxGroupingOutput = 1_000_000;
 
@@ -322,15 +348,16 @@ internal static class Program
         }
     }
 
-    private sealed class TelemetryEntry
+    [DataContract]
+    public sealed class TelemetryEntry
     {
-        public string Workshop { get; set; } = "";
-        public string Sensor { get; set; } = "";
-        public double Value { get; set; }
-        public bool IsDefect { get; set; }
+        [DataMember] public string Workshop { get; set; } = "";
+        [DataMember] public string Sensor { get; set; } = "";
+        [DataMember] public double Value { get; set; }
+        [DataMember] public bool IsDefect { get; set; }
     }
 
-    private sealed class SensorStats
+    public sealed class SensorStats
     {
         public string Workshop { get; set; } = "";
         public string Sensor { get; set; } = "";
@@ -340,7 +367,7 @@ internal static class Program
         public double DefectPercent { get; set; }
     }
 
-    private sealed class StatsHistory
+    public sealed class StatsHistory
     {
         public DateTime Timestamp { get; set; }
         public List<SensorStats> Items { get; set; } = new();
@@ -914,7 +941,7 @@ internal static class Program
         }
     }
 
-    private sealed class Employee
+    public sealed class Employee
     {
         public string Id { get; set; } = "";
         public string Name { get; set; } = "";
@@ -1018,7 +1045,7 @@ internal static class Program
         }
     }
 
-    private sealed class Department
+    public sealed class Department
     {
         public string Name { get; set; } = "";
         public List<DepartmentEmployee> Employees { get; set; } = new();
@@ -1051,7 +1078,7 @@ internal static class Program
         }
     }
 
-    private sealed class DepartmentEmployee
+    public sealed class DepartmentEmployee
     {
         public string Name { get; set; } = "";
         public int Age { get; set; }
@@ -1123,7 +1150,7 @@ internal static class Program
         }
     }
 
-    private sealed class FileAuditItem
+    public sealed class FileAuditItem
     {
         public string Path { get; set; } = "";
         public long Size { get; set; }
@@ -2507,7 +2534,7 @@ internal static class Program
         }
     }
 
-    private sealed class Booking
+    public sealed class Booking
     {
         public string Room { get; set; } = "";
         public DateTime Start { get; set; }
@@ -2688,7 +2715,7 @@ internal static class Program
         }
     }
 
-    private sealed class CodeQualityReport
+    public sealed class CodeQualityReport
     {
         public int FileCount { get; set; }
         public long TotalSize { get; set; }
