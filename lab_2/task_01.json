@@ -1,0 +1,4 @@
+[
+  { "Workshop": "Цех 1", "Sensor": "S1", "Value": 12.3, "IsDefect": false },
+  { "Workshop": "Цех 1", "Sensor": "S2", "Value": 15.8, "IsDefect": true }
+]

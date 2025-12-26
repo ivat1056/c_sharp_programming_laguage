@@ -13,6 +13,7 @@ using System.Text;
 internal static class Program
 {
     private const string Divider = "----------------------------------------";
+    private const int GroupingOutputLimit = 1_000_000;
 
     private static void Main()
     {
@@ -515,7 +516,8 @@ internal static class Program
             return;
         }
 
-        if (!long.TryParse(File.ReadAllText(inputPath).Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ||
+        if (!long.TryParse(File.ReadAllText(inputPath).Trim(), NumberStyles.Integer, 
+        CultureInfo.InvariantCulture, out var n) ||
             n < 1)
         {
             Console.WriteLine("В файле должно быть положительное целое N.");
@@ -539,8 +541,28 @@ internal static class Program
             return;
         }
 
-        var groups = BuildGroups(n);
+        if (mode != "2")
+        {
+            stopwatch.Stop();
+            Console.WriteLine("Неизвестный режим. Завершение задачи.");
+            return;
+        }
+
+        if (n > GroupingOutputLimit)
+        {
+            stopwatch.Stop();
+            Console.WriteLine($"Формирование самих групп поддерживается только для N <= {GroupingOutputLimit}.");
+            Console.WriteLine($"M = {groupCount}. Выберите режим 1 или уменьшите N для полного вывода групп.");
+            return;
+        }
+
+        var groups = BuildGroups(n, groupCount);
         stopwatch.Stop();
+
+        if (groups.Keys.Max() != groupCount)
+        {
+            Console.WriteLine($"Предупреждение: получено групп {groups.Keys.Max()}, ожидалось {groupCount}.");
+        }
 
         var outputPath = Path.Combine(Path.GetDirectoryName(inputPath) ?? ".", "groups_output.txt");
         WriteGroupsToFile(groups, outputPath);
@@ -573,63 +595,49 @@ internal static class Program
     }
 
     /// <summary>
-    /// Формирует группы: номер группы = число простых множителей (с повторениями) + 1.
+    /// Формирует группы: номер группы = floor(log2(number)) + 1.
+    /// Для любых a | b, a != b выполняется log2(a) < log2(b), поэтому числа из цепочки делимости попадают
+    ///  в разные группы.
+    /// Число групп при таком разбиении равно floor(log2(N)) + 1, что совпадает с минимальным M.
     /// </summary>
-    private static Dictionary<int, List<long>> BuildGroups(long n)
+    private static Dictionary<int, List<long>> BuildGroups(long n, int expectedGroupCount)
     {
-        var groups = new Dictionary<int, List<long>>();
-        for (long number = 1; number <= n; number++)
+        if (n < 1)
         {
-            var groupIndex = number == 1 ? 1 : CountPrimeFactors(number) + 1;
-            if (!groups.TryGetValue(groupIndex, out var list))
+            throw new ArgumentOutOfRangeException(nameof(n), "N должно быть положительным.");
+        }
+
+        if (n > GroupingOutputLimit)
+        {
+            throw new ArgumentOutOfRangeException(nameof(n), $"N должно быть не больше {GroupingOutputLimit} для построения групп.");
+        }
+
+        var groups = new Dictionary<int, List<long>>(expectedGroupCount)
+        {
+            [1] = new List<long> { 1 }
+        };
+
+        var currentGroup = 1;
+        var nextPowerOfTwo = 2L;
+
+        for (long number = 2; number <= n; number++)
+        {
+            if (number == nextPowerOfTwo)
             {
-                list = new List<long>();
-                groups[groupIndex] = list;
+                currentGroup++;
+                nextPowerOfTwo *= 2;
             }
 
-            // Добавляем число в соответствующую группу
+            if (!groups.TryGetValue(currentGroup, out var list))
+            {
+                list = new List<long>();
+                groups[currentGroup] = list;
+            }
+
             list.Add(number);
         }
 
         return groups;
-    }
-
-    /// <summary>
-    /// Подсчитывает количество простых множителей числа с учётом кратности.
-    /// </summary>
-    private static int CountPrimeFactors(long number)
-    {
-        if (number < 2)
-        {
-            return 0;
-        }
-
-        var count = 0;
-        while (number % 2 == 0)
-        {
-            count++;
-            number /= 2;
-        }
-
-        var divisor = 3L;
-        while (divisor * divisor <= number)
-        {
-            while (number % divisor == 0)
-            {
-                count++;
-                number /= divisor;
-            }
-
-            divisor += 2;
-        }
-
-        if (number > 1)
-        {
-            // Остался простой множитель > 1
-            count++;
-        }
-
-        return count;
     }
 
     /// <summary>
