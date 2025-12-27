@@ -1,8 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<CodeQualityReport xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <FileCount>280</FileCount>
-  <TotalSize>1063542</TotalSize>
-  <Timestamp>2025-12-26T21:18:36.523941Z</Timestamp>
-  <Complexity>560</Complexity>
-  <Coverage>75</Coverage>
-</CodeQualityReport>
