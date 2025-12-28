@@ -8,9 +8,6 @@ using System.Windows.Media.Animation;
 
 namespace MinesweeperCalculator
 {
-    /// <summary>
-    /// Calculator-themed minesweeper window with visual effects.
-    /// </summary>
     public partial class CalculatorWindow : Window
     {
         private const int SmallWindowWidth = 340;
@@ -61,6 +58,9 @@ namespace MinesweeperCalculator
         private readonly stuff gameBoard;
         private Button?[,]? cellButtons;
         private bool isExpanded = false;
+        private bool showHints = true;
+        private bool hintUsed = false;
+        private readonly Random hintRandom = new Random();
 
         public CalculatorWindow()
         {
@@ -91,6 +91,12 @@ namespace MinesweeperCalculator
             }
 
             gameBoard.ResetBoard();
+            UpdateBoardState();
+            hintUsed = false;
+            if (HintButton != null)
+            {
+                HintButton.IsEnabled = true;
+            }
         }
 
         private Button? CreateCellButton(int row, int col)
@@ -255,16 +261,16 @@ namespace MinesweeperCalculator
                     bool isEqualsButton = IsEqualsButton(label);
                     bool isSpecialButton = isOperatorButton || isFunctionButton || isEqualsButton;
 
-                    if (gameBoard.IsCellFlagged(row, col))
-                    {
-                        ApplyFlagAppearance(button);
-                    }
-                    else if (gameBoard.IsCellRevealed(row, col))
-                    {
-                        ApplyRevealedAppearance(button, label, isSpecialButton, row, col);
-                    }
-                    else
-                    {
+            if (gameBoard.IsCellFlagged(row, col))
+            {
+                ApplyFlagAppearance(button);
+            }
+            else if (gameBoard.IsCellRevealed(row, col))
+            {
+                ApplyRevealedAppearance(button, label, isSpecialButton, row, col);
+            }
+            else
+            {
                         ApplyHiddenAppearance(button, label, isOperatorButton, isFunctionButton, isEqualsButton);
                     }
                 }
@@ -289,6 +295,12 @@ namespace MinesweeperCalculator
             {
                 DisplayLabel.Foreground = new SolidColorBrush(Colors.White);
                 ResetButton.Visibility = Visibility.Collapsed;
+            }
+
+            if (HintButton != null)
+            {
+                HintButton.IsEnabled = !hintUsed && !gameBoard.IsGameOver && !gameBoard.HasWon && HasSafeHiddenCells();
+                HintButton.Opacity = HintButton.IsEnabled ? 1.0 : 0.5;
             }
         }
 
@@ -340,7 +352,7 @@ namespace MinesweeperCalculator
                 }
                 else
                 {
-                    button.Content = value.ToString();
+                    button.Content = showHints ? value.ToString() : "•";
                     button.Background = RevealedBackground;
                     button.Foreground = GetNumberBrush(value);
                 }
@@ -371,6 +383,57 @@ namespace MinesweeperCalculator
                 8 => new SolidColorBrush(Colors.Gray),
                 _ => new SolidColorBrush(Colors.Black)
             };
+        }
+
+        private void ShowHintsCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            showHints = ShowHintsCheckBox.IsChecked == true;
+            UpdateBoardState();
+        }
+
+        private bool HasSafeHiddenCells()
+        {
+            return AllCoordinates().Any(coord =>
+                !gameBoard.IsCellRevealed(coord.Row, coord.Col) &&
+                !gameBoard.IsCellFlagged(coord.Row, coord.Col) &&
+                gameBoard.GetCellValue(coord.Row, coord.Col) != -1);
+        }
+
+        private void HintButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (hintUsed || gameBoard.IsGameOver || gameBoard.HasWon)
+            {
+                return;
+            }
+
+            var safeCells = AllCoordinates()
+                .Where(coord => !gameBoard.IsCellRevealed(coord.Row, coord.Col)
+                                && !gameBoard.IsCellFlagged(coord.Row, coord.Col)
+                                && gameBoard.GetCellValue(coord.Row, coord.Col) != -1)
+                .ToList();
+
+            if (safeCells.Count == 0)
+            {
+                hintUsed = true;
+                UpdateBoardState();
+                return;
+            }
+
+            var choice = safeCells[hintRandom.Next(safeCells.Count)];
+            gameBoard.RevealCell(choice.Row, choice.Col);
+            hintUsed = true;
+            UpdateBoardState();
+        }
+
+        private IEnumerable<(int Row, int Col)> AllCoordinates()
+        {
+            for (int row = 0; row < Rows; row++)
+            {
+                for (int col = 0; col < Columns; col++)
+                {
+                    yield return (row, col);
+                }
+            }
         }
 
         private void RevealMines()
